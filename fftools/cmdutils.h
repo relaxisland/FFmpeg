@@ -334,13 +334,13 @@ typedef struct OptionGroupList {
 } OptionGroupList;
 
 typedef struct OptionParseContext {
-    OptionGroup global_opts;
+    OptionGroup global_opts;        // 全局设定选项组
 
-    OptionGroupList *groups;
-    int           nb_groups;
+    OptionGroupList *groups;        // 这时grouplist，目前只有2个，但是每个grouplist里可以有多个group（多个输入文件，多个输出文件）
+    int           nb_groups;        // 固定2 （输入的和 输出的  ）
 
     /* parsing state */
-    OptionGroup cur_group;
+    OptionGroup cur_group;          // 目前正在解析的设定组 （解析完，会添加到相应的grouplist）
 } OptionParseContext;
 
 /**

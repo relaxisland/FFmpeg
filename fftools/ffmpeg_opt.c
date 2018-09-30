@@ -3205,6 +3205,9 @@ enum OptGroup {
     GROUP_INFILE,
 };
 
+// 选项分组的定义（不是说只有2个组别，是有两种类型的组别）
+// 输入文件的选项组一般是以 -i 结束
+// 输出文件的选项组一般就是以  输出文件名结尾（没有 -）
 static const OptionGroupDef groups[] = {
     [GROUP_OUTFILE] = { "output url",  NULL, OPT_OUTPUT },
     [GROUP_INFILE]  = { "input url",   "i",  OPT_INPUT },
@@ -3252,6 +3255,9 @@ int ffmpeg_parse_options(int argc, char **argv)
     memset(&octx, 0, sizeof(octx));
 
     /* split the commandline into an internal representation */
+    // 解析argc,argv，保存到 OptionParseContext
+    // options,groups是常量
+    // groups就两种类型，一个是输入文件的，一个是输出文件的。 还有一个是全局选项的group，不在此列。
     ret = split_commandline(&octx, argc, argv, options, groups,
                             FF_ARRAY_ELEMS(groups));
     if (ret < 0) {

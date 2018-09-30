@@ -84,6 +84,7 @@ enum show_muxdemuxers {
 
 void init_opts(void)
 {
+    // todo 201809 这个选项为啥特别？而且libswscale貌似也没有这个选项
     av_dict_set(&sws_dict, "flags", "bicubic", 0);
 }
 
@@ -215,10 +216,13 @@ void show_help_children(const AVClass *class, int flags)
         show_help_children(child, flags);
 }
 
+// 在选项列表中查找是否有改选项。
+// po 选项表 （options[]）
+// name 选项名
 static const OptionDef *find_option(const OptionDef *po, const char *name)
 {
     const char *p = strchr(name, ':');
-    int len = p ? p - name : strlen(name);
+    int len = p ? p - name : strlen(name);      // 部分选项可以加:a 或者:v 来说明是作用于audio还是video
 
     while (po->name) {
         if (!strncmp(name, po->name, len) && strlen(po->name) == len)
@@ -542,6 +546,12 @@ static const AVOption *opt_find(void *obj, const char *name, const char *unit,
 }
 
 #define FLAGS (o->type == AV_OPT_TYPE_FLAGS && (arg[0]=='-' || arg[0]=='+')) ? AV_DICT_APPEND : 0
+// 查看选项是否是各个lib（libavcodec, libavformat）的,并保存到对应的dict
+//extern AVDictionary *sws_dict;
+//extern AVDictionary *swr_opts;
+//extern AVDictionary *format_opts, *codec_opts, *resample_opts;
+
+// opt是选项名，arg是对应的设定值
 int opt_default(void *optctx, const char *opt, const char *arg)
 {
     const AVOption *o;
@@ -639,6 +649,8 @@ int opt_default(void *optctx, const char *opt, const char *arg)
  *
  * @return index of the group definition that matched or -1 if none
  */
+// 匹配选项组的分隔符
+// 目前只有2个选项组，而输出文件组别的分隔符是null，因此，实际判断就是是否是 i。
 static int match_group_separator(const OptionGroupDef *groups, int nb_groups,
                                  const char *opt)
 {
@@ -659,13 +671,16 @@ static int match_group_separator(const OptionGroupDef *groups, int nb_groups,
  * @param group_idx which group definition should this group belong to
  * @param arg argument of the group delimiting option
  */
+// 把当前分析完成的group添加到所属的grouplist
+// group_idx 所属的group类型（0：输出文件的，1 输入文件的）
+// arg 输入文件名  或者 输出文件名
 static void finish_group(OptionParseContext *octx, int group_idx,
                          const char *arg)
 {
     OptionGroupList *l = &octx->groups[group_idx];
     OptionGroup *g;
 
-    GROW_ARRAY(l->groups, l->nb_groups);
+    GROW_ARRAY(l->groups, l->nb_groups);        // 所属grouplist内存扩展一个给新的group
     g = &l->groups[l->nb_groups - 1];
 
     *g             = octx->cur_group;
@@ -690,9 +705,14 @@ static void finish_group(OptionParseContext *octx, int group_idx,
 /*
  * Add an option instance to currently parsed group.
  */
+// 选项添加到 全局选项组 或者 当前分析的选项组
+// opt 对应选项表里的选项
+// key 选项名
+// val 选项对应的设定值
 static void add_opt(OptionParseContext *octx, const OptionDef *opt,
                     const char *key, const char *val)
 {
+    // 根据选项的特性，判断是否是 全局 选项
     int global = !(opt->flags & (OPT_PERFILE | OPT_SPEC | OPT_OFFSET));
     OptionGroup *g = global ? &octx->global_opts : &octx->cur_group;
 
@@ -710,15 +730,15 @@ static void init_parse_context(OptionParseContext *octx,
 
     memset(octx, 0, sizeof(*octx));
 
-    octx->nb_groups = nb_groups;
-    octx->groups    = av_mallocz_array(octx->nb_groups, sizeof(*octx->groups));
+    octx->nb_groups = nb_groups;            // 这边其实是组别list的个数 （固定2）
+    octx->groups    = av_mallocz_array(octx->nb_groups, sizeof(*octx->groups)); // grouplist
     if (!octx->groups)
         exit_program(1);
 
     for (i = 0; i < octx->nb_groups; i++)
-        octx->groups[i].group_def = &groups[i];
+        octx->groups[i].group_def = &groups[i];         // 每个grouplist设置 对应的 组定义 （也就是这个list的group都是属于某种类型（输入文件的还是输出文件的））
 
-    octx->global_opts.group_def = &global_group;
+    octx->global_opts.group_def = &global_group;        // 全局选项group也设置了一个组别类型 （只是为了统一？）
     octx->global_opts.arg       = "";
 
     init_opts();
@@ -758,8 +778,11 @@ int split_commandline(OptionParseContext *octx, int argc, char *argv[],
     int dashdash = -2;
 
     /* perform system-dependent conversions for arguments list */
+    // argv字符串的转换 （貌似是window系统时，需要从宽字符转为utf8）
+    // linux系统不需要
     prepare_app_arguments(&argc, &argv);
 
+    // 初始化OptionParseContext
     init_parse_context(octx, groups, nb_groups);
     av_log(NULL, AV_LOG_DEBUG, "Splitting the commandline.\n");
 
@@ -770,17 +793,23 @@ int split_commandline(OptionParseContext *octx, int argc, char *argv[],
 
         av_log(NULL, AV_LOG_DEBUG, "Reading option '%s' ...", opt);
 
+        // 如果是 "--"         (todo 什么时候会出现这个？)
         if (opt[0] == '-' && opt[1] == '-' && !opt[2]) {
             dashdash = optindex;
             continue;
         }
         /* unnamed group separators, e.g. output filename */
+
+        // 如果不是'-' 开头       应该就是输出文件名吧
+        // 如果单独出现 '-'
+        // 如果出现在 "--" 的下一个
         if (opt[0] != '-' || !opt[1] || dashdash+1 == optindex) {
+            // 结束一个组的解析 (而且是一个  输出文件 的组 （0）)
             finish_group(octx, 0, opt);
             av_log(NULL, AV_LOG_DEBUG, " matched as %s.\n", groups[0].name);
             continue;
         }
-        opt++;
+        opt++;      //到这里都是'-'开头的，跳过'-'
 
 #define GET_ARG(arg)                                                           \
 do {                                                                           \
@@ -792,32 +821,40 @@ do {                                                                           \
 } while (0)
 
         /* named group separators, e.g. -i */
+        // 匹配组的分隔符 （其实就是 -i 的 i）（因为只有2种类型的组，而输出文件的组在前面已经处理了）
         if ((ret = match_group_separator(groups, nb_groups, opt)) >= 0) {
-            GET_ARG(arg);
-            finish_group(octx, ret, arg);
+            GET_ARG(arg);       // 获取输入文件名
+            finish_group(octx, ret, arg);   // 结束一个组的解析 (而且是一个  输入文件 的组)
             av_log(NULL, AV_LOG_DEBUG, " matched as %s with argument '%s'.\n",
                    groups[ret].name, arg);
             continue;
         }
 
+        // 到这里，就是正经的选项了 （排除了输入文件 和 输出文件）
         /* normal options */
-        po = find_option(options, opt);
+        po = find_option(options, opt);     // 在options常量表中查找是否有该选项
         if (po->name) {
             if (po->flags & OPT_EXIT) {
+                // 如果是退出选项  （目前在表里只看到  hwaccels）
                 /* optional argument, e.g. -h */
                 arg = argv[optindex++];
             } else if (po->flags & HAS_ARG) {
+                // 如果选项带参数
                 GET_ARG(arg);
             } else {
+                // 如果不带参数，就是boolean，并且是true（？）
                 arg = "1";
             }
 
+            // 该选项添加到当前的分析组（或全局组）
             add_opt(octx, po, opt, arg);
             av_log(NULL, AV_LOG_DEBUG, " matched as option '%s' (%s) with "
                    "argument '%s'.\n", po->name, po->help, arg);
             continue;
         }
 
+        // 到这里，就说明这个选项不在ffmpeg选项表中的
+        // 可能就是 libavcodec,libavfilter等 各自的设定选项
         /* AVOptions */
         if (argv[optindex]) {
             ret = opt_default(NULL, opt, argv[optindex]);
