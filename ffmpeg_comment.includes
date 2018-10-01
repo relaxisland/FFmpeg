@@ -1,3 +1,4 @@
+./
 compat
 compat/aix
 compat/atomics/dummy
