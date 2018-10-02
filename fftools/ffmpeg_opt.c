@@ -3266,6 +3266,9 @@ int ffmpeg_parse_options(int argc, char **argv)
     }
 
     /* apply global options */
+    // 解析全局选项组
+    // 为啥第一个参数可以是NULL，因为 （OPT_PERFILE | OPT_SPEC | OPT_OFFSET）以外的才是 全局
+    // 因此解析全局选项时，不需要OptionsContext
     ret = parse_optgroup(NULL, &octx.global_opts);
     if (ret < 0) {
         av_log(NULL, AV_LOG_FATAL, "Error parsing global options: ");

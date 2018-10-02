@@ -297,7 +297,7 @@ typedef struct AVOption {
      * options and corresponding named constants share the same
      * unit. May be NULL.
      */
-    const char *unit;
+    const char *unit;           // todo ？？ 命令的分类， 作用呢？
 } AVOption;
 
 /**
@@ -561,6 +561,7 @@ int av_opt_eval_q     (void *obj, const AVOption *o, const char *val, AVRational
  *  useful for searching for options without needing to allocate the corresponding
  *  object.
  */
+//要检索的类不是包含AVClass的对象比如（AVFormatContext）,而是AVClass的对象（AVClass av_format_context_class）
 #define AV_OPT_SEARCH_FAKE_OBJ   (1 << 1)
 
 /**
@@ -622,6 +623,8 @@ const AVOption *av_opt_find(void *obj, const char *name, const char *unit,
  * @return A pointer to the option found, or NULL if no option
  *         was found.
  */
+// unit： 不为空，意味着查找constant类型的option？  （目的呢？）
+// target_obj： 返回option所属的对象
 const AVOption *av_opt_find2(void *obj, const char *name, const char *unit,
                              int opt_flags, int search_flags, void **target_obj);
 
@@ -642,6 +645,7 @@ const AVOption *av_opt_next(const void *obj, const AVOption *prev);
  * @param prev result of a previous call to this function or NULL
  * @return next AVOptions-enabled child or NULL
  */
+// obj里含有AVClass的对象
 void *av_opt_child_next(void *obj, void *prev);
 
 /**
@@ -650,6 +654,7 @@ void *av_opt_child_next(void *obj, void *prev);
  * @param prev result of a previous call to this function or NULL
  * @return AVClass corresponding to next potential child or NULL
  */
+// 所有潜在的孩子 （比如 所有的format，这时候parent一般是一个AVClass，而不是包含AVClass的对象）
 const AVClass *av_opt_child_class_next(const AVClass *parent, const AVClass *prev);
 
 /**

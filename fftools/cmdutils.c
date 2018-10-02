@@ -296,11 +296,14 @@ static inline void prepare_app_arguments(int *argc_ptr, char ***argv_ptr)
 }
 #endif /* HAVE_COMMANDLINETOARGVW */
 
+// 设置选项（设定值写到相应的变量）
 static int write_option(void *optctx, const OptionDef *po, const char *opt,
                         const char *arg)
 {
     /* new-style options contain an offset into optctx, old-style address of
      * a global var*/
+    // 根据options表，取得该选项对应的变量的地址
+    // 全局选项不会是 （OPT_OFFSET | OPT_SPEC）
     void *dst = po->flags & (OPT_OFFSET | OPT_SPEC) ?
                 (uint8_t *)optctx + po->u.off : po->u.dst_ptr;
     int *dstcount;
@@ -415,6 +418,9 @@ void parse_options(void *optctx, int argc, char **argv, const OptionDef *options
     }
 }
 
+// 解析全局选项组
+// 为啥第一个参数可以是NULL，因为 （OPT_PERFILE | OPT_SPEC | OPT_OFFSET）以外的才是 全局
+// 因此解析全局选项时，不需要OptionsContext
 int parse_optgroup(void *optctx, OptionGroup *g)
 {
     int i, ret;
@@ -425,6 +431,8 @@ int parse_optgroup(void *optctx, OptionGroup *g)
     for (i = 0; i < g->nb_opts; i++) {
         Option *o = &g->opts[i];
 
+        // 判断选项的flag 和 组别的flag是否一样（是否包含组别的flag）
+        // 组别的flag有， 全局：null  输入：opt_input，输出:opt_output
         if (g->group_def->flags &&
             !(g->group_def->flags & o->opt->flags)) {
             av_log(NULL, AV_LOG_ERROR, "Option %s (%s) cannot be applied to "
@@ -540,7 +548,7 @@ static const AVOption *opt_find(void *obj, const char *name, const char *unit,
                             int opt_flags, int search_flags)
 {
     const AVOption *o = av_opt_find(obj, name, unit, opt_flags, search_flags);
-    if(o && !o->flags)
+    if(o && !o->flags)      // todo 有flag=0的？
         return NULL;
     return o;
 }
@@ -574,15 +582,18 @@ int opt_default(void *optctx, const char *opt, const char *arg)
 
     if (!(p = strchr(opt, ':')))
         p = opt + strlen(opt);
-    av_strlcpy(opt_stripped, opt, FFMIN(sizeof(opt_stripped), p - opt + 1));
+    av_strlcpy(opt_stripped, opt, FFMIN(sizeof(opt_stripped), p - opt + 1));        // opt_stripped是去掉:以及后面字母的
 
+    // 查找所有codec的设定项
     if ((o = opt_find(&cc, opt_stripped, NULL, 0,
                          AV_OPT_SEARCH_CHILDREN | AV_OPT_SEARCH_FAKE_OBJ)) ||
-        ((opt[0] == 'v' || opt[0] == 'a' || opt[0] == 's') &&
+        ((opt[0] == 'v' || opt[0] == 'a' || opt[0] == 's') &&                       // a(audio) v(video) s(subtitle)开头的则取其后面部分查找
          (o = opt_find(&cc, opt + 1, NULL, 0, AV_OPT_SEARCH_FAKE_OBJ)))) {
-        av_dict_set(&codec_opts, opt, arg, FLAGS);
+        av_dict_set(&codec_opts, opt, arg, FLAGS);          // 保存到 dict
         consumed = 1;
     }
+
+    // // 查找所有format的设定项
     if ((o = opt_find(&fc, opt, NULL, 0,
                          AV_OPT_SEARCH_CHILDREN | AV_OPT_SEARCH_FAKE_OBJ))) {
         av_dict_set(&format_opts, opt, arg, FLAGS);
@@ -590,6 +601,8 @@ int opt_default(void *optctx, const char *opt, const char *arg)
             av_log(NULL, AV_LOG_VERBOSE, "Routing option %s to both codec and muxer layer\n", opt);
         consumed = 1;
     }
+
+    // todo 剩下3个lib暂略
 #if CONFIG_SWSCALE
     if (!consumed && (o = opt_find(&sc, opt, NULL, 0,
                          AV_OPT_SEARCH_CHILDREN | AV_OPT_SEARCH_FAKE_OBJ))) {
@@ -770,6 +783,9 @@ void uninit_parse_context(OptionParseContext *octx)
     uninit_opts();
 }
 
+// 解析argc,argv，保存到 OptionParseContext
+// options,groups是常量
+// groups就两种类型，一个是输入文件的，一个是输出文件的。 还有一个是全局选项的group，不在此列。
 int split_commandline(OptionParseContext *octx, int argc, char *argv[],
                       const OptionDef *options,
                       const OptionGroupDef *groups, int nb_groups)
@@ -871,6 +887,8 @@ do {                                                                           \
         }
 
         /* boolean -nofoo options */
+        // 如果"no"开头，则可能是boolean型的选项并设置为false
+        // 只有ffmpeg的选项？ 各个lib不支持这个？
         if (opt[0] == 'n' && opt[1] == 'o' &&
             (po = find_option(options, opt + 2)) &&
             po->name && po->flags & OPT_BOOL) {
@@ -884,6 +902,7 @@ do {                                                                           \
         return AVERROR_OPTION_NOT_FOUND;
     }
 
+    // 最后一个group，没有finish？
     if (octx->cur_group.nb_opts || codec_opts || format_opts || resample_opts)
         av_log(NULL, AV_LOG_WARNING, "Trailing options were found on the "
                "commandline.\n");

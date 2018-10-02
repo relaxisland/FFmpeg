@@ -42,6 +42,8 @@
 
 #include <float.h>
 
+//获取obj的options表的option，last的下一个
+// options表的最后一项null结束
 const AVOption *av_opt_next(const void *obj, const AVOption *last)
 {
     const AVClass *class;
@@ -1598,12 +1600,17 @@ int av_opt_set_dict(void *obj, AVDictionary **options)
     return av_opt_set_dict2(obj, options, 0);
 }
 
+//obj 是要find的类，注意可以说含有AVClass成员的类的对象，也有可能就是AVClass
+// 比如formatcontext的对象  或者 av_format_context_class
+// 如果后者， AV_OPT_SEARCH_FAKE_OBJ 指明
 const AVOption *av_opt_find(void *obj, const char *name, const char *unit,
                             int opt_flags, int search_flags)
 {
     return av_opt_find2(obj, name, unit, opt_flags, search_flags, NULL);
 }
 
+// unit： 不为空，意味着查找constant类型的option？ 为空，则是查找所有非constant的option （目的呢？），
+// target_obj： 返回option所属的对象
 const AVOption *av_opt_find2(void *obj, const char *name, const char *unit,
                              int opt_flags, int search_flags, void **target_obj)
 {
@@ -1618,27 +1625,29 @@ const AVOption *av_opt_find2(void *obj, const char *name, const char *unit,
     if (!c)
         return NULL;
 
-    if (search_flags & AV_OPT_SEARCH_CHILDREN) {
-        if (search_flags & AV_OPT_SEARCH_FAKE_OBJ) {
+    if (search_flags & AV_OPT_SEARCH_CHILDREN) {        // 如果要查找下一级（比如从formatcontext,到 format）
+        if (search_flags & AV_OPT_SEARCH_FAKE_OBJ) {    // 如果传入的只是 AVClass
             const AVClass *child = NULL;
-            while (child = av_opt_child_class_next(c, child))
+            while (child = av_opt_child_class_next(c, child))       // 以format为例，遍历所有的format （用于ffmpeg命令行的解析，这时候还不知道是哪个format）
                 if (o = av_opt_find2(&child, name, unit, opt_flags, search_flags, NULL))
                     return o;
         } else {
+            // 是一个包含AVClass类的对象 （比如 formatContext）
             void *child = NULL;
-            while (child = av_opt_child_next(obj, child))
+            while (child = av_opt_child_next(obj, child))   // 查找某个具体包含AVClass的成员对象
                 if (o = av_opt_find2(child, name, unit, opt_flags, search_flags, target_obj))
                     return o;
         }
     }
 
+    // 获取obj的options表的每一个项目，并和要查找的进行比较
     while (o = av_opt_next(obj, o)) {
         if (!strcmp(o->name, name) && (o->flags & opt_flags) == opt_flags &&
             ((!unit && o->type != AV_OPT_TYPE_CONST) ||
              (unit  && o->type == AV_OPT_TYPE_CONST && o->unit && !strcmp(o->unit, unit)))) {
             if (target_obj) {
                 if (!(search_flags & AV_OPT_SEARCH_FAKE_OBJ))
-                    *target_obj = obj;
+                    *target_obj = obj;                      //返回option所属的对象
                 else
                     *target_obj = NULL;
             }
@@ -1648,6 +1657,7 @@ const AVOption *av_opt_find2(void *obj, const char *name, const char *unit,
     return NULL;
 }
 
+// obj里含有AVClass的对象
 void *av_opt_child_next(void *obj, void *prev)
 {
     const AVClass *c = *(AVClass **)obj;
@@ -1656,6 +1666,7 @@ void *av_opt_child_next(void *obj, void *prev)
     return NULL;
 }
 
+// 所有潜在的孩子 （比如 所有的format，这时候parent一般是一个AVClass，而不是包含AVClass的对象）
 const AVClass *av_opt_child_class_next(const AVClass *parent, const AVClass *prev)
 {
     if (parent->child_class_next)

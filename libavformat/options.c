@@ -41,6 +41,7 @@ static const char* format_to_name(void* ptr)
     else return "NULL";
 }
 
+// 获取下一级可以设置选项类 （输入输出format，以及iocontext）
 static void *format_child_next(void *obj, void *prev)
 {
     AVFormatContext *s = obj;
@@ -53,6 +54,8 @@ static void *format_child_next(void *obj, void *prev)
     return NULL;
 }
 
+// 遍历所有的可能的儿子类型
+// 这边，就遍历这个库所有的format （用于 format确认之前？）
 static const AVClass *format_child_class_next(const AVClass *prev)
 {
     AVInputFormat  *ifmt = NULL;
