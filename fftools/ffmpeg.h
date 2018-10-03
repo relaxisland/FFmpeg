@@ -96,8 +96,8 @@ typedef struct OptionsContext {
     OptionGroup *g;
 
     /* input/output options */
-    int64_t start_time;
-    int64_t start_time_eof;
+    int64_t start_time;         // 转码的开始时间
+    int64_t start_time_eof;     // 转码的开始时间（结尾的offset）
     int seek_timestamp;
     const char *format;
 
@@ -147,8 +147,8 @@ typedef struct OptionsContext {
 
     int chapters_input_file;
 
-    int64_t recording_time;
-    int64_t stop_time;
+    int64_t recording_time;         // -t 转码的时长（区间）
+    int64_t stop_time;              // -to 转码的结束时间（时间点）
     uint64_t limit_filesize;
     float mux_preload;
     float mux_max_delay;

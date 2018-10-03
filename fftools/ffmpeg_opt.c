@@ -973,6 +973,8 @@ static void dump_attachment(AVStream *st, const char *filename)
     avio_close(out);
 }
 
+// 打开一个输入文件
+// OptionsContext *o  该输入文件的选项组的设定已经设置到 OptionsContext *o 了
 static int open_input_file(OptionsContext *o, const char *filename)
 {
     InputFile *f;
@@ -988,11 +990,13 @@ static int open_input_file(OptionsContext *o, const char *filename)
     char *    data_codec_name = NULL;
     int scan_all_pmts_set = 0;
 
+    // 转码结束时间 和 时长 不能同时设置
     if (o->stop_time != INT64_MAX && o->recording_time != INT64_MAX) {
         o->stop_time = INT64_MAX;
         av_log(NULL, AV_LOG_WARNING, "-t and -to cannot be used together; using -t.\n");
     }
 
+    // 结束时间不能大于开始时间
     if (o->stop_time != INT64_MAX && o->recording_time == INT64_MAX) {
         int64_t start_time = o->start_time == AV_NOPTS_VALUE ? 0 : o->start_time;
         if (o->stop_time <= start_time) {
@@ -3213,18 +3217,21 @@ static const OptionGroupDef groups[] = {
     [GROUP_INFILE]  = { "input url",   "i",  OPT_INPUT },
 };
 
+// 打开输入文件 （可能多个）
 static int open_files(OptionGroupList *l, const char *inout,
                       int (*open_file)(OptionsContext*, const char*))
 {
     int i, ret;
 
+    // 打开 多个输入文件组的每一个
     for (i = 0; i < l->nb_groups; i++) {
         OptionGroup *g = &l->groups[i];
         OptionsContext o;
 
         init_options(&o);
-        o.g = g;
+        o.g = g;                    // 选项组的原始信息的指针也保存在OptionsContext （各个lib的专有选项没有设置到OptionsContext）
 
+        // 该组的的选项 设定到 OptionsContext o
         ret = parse_optgroup(&o, g);
         if (ret < 0) {
             av_log(NULL, AV_LOG_ERROR, "Error parsing options for %s file "
@@ -3233,7 +3240,7 @@ static int open_files(OptionGroupList *l, const char *inout,
         }
 
         av_log(NULL, AV_LOG_DEBUG, "Opening an %s file: %s.\n", inout, g->arg);
-        ret = open_file(&o, g->arg);
+        ret = open_file(&o, g->arg);        //arg就是该输入文件组 对应的文件名
         uninit_options(&o);
         if (ret < 0) {
             av_log(NULL, AV_LOG_ERROR, "Error opening %s file %s.\n",
@@ -3276,6 +3283,7 @@ int ffmpeg_parse_options(int argc, char **argv)
     }
 
     /* configure terminal and setup signal handlers */
+    // 注册信号处理函数
     term_init();
 
     /* open input files */

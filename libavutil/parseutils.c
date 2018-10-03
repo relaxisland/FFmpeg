@@ -584,6 +584,7 @@ time_t av_timegm(struct tm *tm)
     return t;
 }
 
+// todo 没看
 int av_parse_time(int64_t *timeval, const char *timestr, int duration)
 {
     const char *p, *q;

@@ -143,6 +143,8 @@ double parse_number_or_die(const char *context, const char *numstr, int type,
 int64_t parse_time_or_die(const char *context, const char *timestr,
                           int is_duration);
 
+//OPT_SPEC的选项会被保存在这种类型的数组
+//比如 codec:a  codec:b 会被保存在这个数组里，specifier就是a，和v
 typedef struct SpecifierOpt {
     char *specifier;    /**< stream/chapter/program/... specifier */
     union {
@@ -173,6 +175,8 @@ typedef struct OptionDef {
 #define OPT_PERFILE  0x2000     /* the option is per-file (currently ffmpeg-only).
                                    implied by OPT_OFFSET or OPT_SPEC */
 #define OPT_OFFSET 0x4000       /* option is specified as an offset in a passed optctx */
+//option会被保存在SpecifierOpt的数组。是OPT_SPEC必然是OPT_OFFSET
+//SpecifierOpt的数组的后一个变量是整数，表明这个数组的元素个数。
 #define OPT_SPEC   0x8000       /* option is to be stored in an array of SpecifierOpt.
                                    Implies OPT_OFFSET. Next element after the offset is
                                    an int containing element count in the array. */

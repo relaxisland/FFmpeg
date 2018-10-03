@@ -142,6 +142,7 @@ void exit_program(int ret)
     exit(ret);
 }
 
+// 转化字符串为double，或者退出程序（转换失败）
 double parse_number_or_die(const char *context, const char *numstr, int type,
                            double min, double max)
 {
@@ -163,6 +164,7 @@ double parse_number_or_die(const char *context, const char *numstr, int type,
     return 0;
 }
 
+// 分析时间字符串
 int64_t parse_time_or_die(const char *context, const char *timestr,
                           int is_duration)
 {
@@ -308,12 +310,12 @@ static int write_option(void *optctx, const OptionDef *po, const char *opt,
                 (uint8_t *)optctx + po->u.off : po->u.dst_ptr;
     int *dstcount;
 
-    if (po->flags & OPT_SPEC) {
+    if (po->flags & OPT_SPEC) {             // 如果是 OPT_SPEC，先定位到specifier数组
         SpecifierOpt **so = dst;
-        char *p = strchr(opt, ':');
+        char *p = strchr(opt, ':');         // 获取codec:a, :后面的字符串，也就是specifier
         char *str;
 
-        dstcount = (int *)(so + 1);
+        dstcount = (int *)(so + 1);     // specifier数组的后一个变量就是int，数组的元素个数
         *so = grow_array(*so, sizeof(**so), dstcount, *dstcount + 1);
         str = av_strdup(p ? p + 1 : "");
         if (!str)
@@ -348,7 +350,7 @@ static int write_option(void *optctx, const OptionDef *po, const char *opt,
             return ret;
         }
     }
-    if (po->flags & OPT_EXIT)
+    if (po->flags & OPT_EXIT)       // 某些选线只是为了打印一些信息，可以退出
         exit_program(0);
 
     return 0;
@@ -446,6 +448,7 @@ int parse_optgroup(void *optctx, OptionGroup *g)
         av_log(NULL, AV_LOG_DEBUG, "Applying option %s (%s) with argument %s.\n",
                o->key, o->opt->help, o->val);
 
+        // 设置选项（设定值写到相应的变量）
         ret = write_option(optctx, o->opt, o->key, o->val);
         if (ret < 0)
             return ret;

@@ -66,9 +66,11 @@ static const AVClass eval_class = {
     .parent_log_context_offset = offsetof(Parser, log_ctx),
 };
 
+//1500MB = 1500 * 10^6 * 8
+//1500MiB = 1500 * 2^20 * 8
 static const struct {
-    double bin_val;
-    double dec_val;
+    double bin_val;     // 2^10
+    double dec_val;     // 10^3
     int8_t exp;
 } si_prefixes['z' - 'E' + 1] = {
     ['y'-'E']= { 8.271806125530276749e-25, 1e-24, -24 },
@@ -103,21 +105,25 @@ static const struct {
     { "QP2LAMBDA", FF_QP2LAMBDA },
 };
 
+// string to double  字符串到double
 double av_strtod(const char *numstr, char **tail)
 {
     double d;
     char *next;
     if(numstr[0]=='0' && (numstr[1]|0x20)=='x') {
-        d = strtoul(numstr, &next, 16);
+        d = strtoul(numstr, &next, 16);     // string to unsigned long int 字符串 到 unsigned long int
     } else
-        d = strtod(numstr, &next);
+        d = strtod(numstr, &next);          // 字符串到浮点数
     /* if parsing succeeded, check for and interpret postfixes */
+    // 如果找到数字，分析它的后缀  （next 数字后的第一个字符）
     if (next!=numstr) {
         if (next[0] == 'd' && next[1] == 'B') {
             /* treat dB as decibels instead of decibytes */
-            d = ff_exp10(d / 20);
+            d = ff_exp10(d / 20);           //分贝
             next += 2;
         } else if (*next >= 'E' && *next <= 'z') {
+            //1500MB = 1500 * 10^6 * 8
+            //1500MiB = 1500 * 2^20 * 8
             int e= si_prefixes[*next - 'E'].exp;
             if (e) {
                 if (next[1] == 'i') {
