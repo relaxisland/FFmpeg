@@ -372,6 +372,7 @@ libavcodec/bmvvideo.c
 libavcodec/brenderpix.c
 libavcodec/bsf.c
 libavcodec/bsf.h
+libavcodec/bsf_list.c
 libavcodec/bswapdsp.c
 libavcodec/bswapdsp.h
 libavcodec/bytestream.h
@@ -441,6 +442,7 @@ libavcodec/cngenc.c
 libavcodec/codec2utils.c
 libavcodec/codec2utils.h
 libavcodec/codec_desc.c
+libavcodec/codec_list.c
 libavcodec/cook.c
 libavcodec/cook_parser.c
 libavcodec/cookdata.h
@@ -1268,6 +1270,7 @@ libavcodec/pafvideo.c
 libavcodec/pamenc.c
 libavcodec/parser.c
 libavcodec/parser.h
+libavcodec/parser_list.c
 libavcodec/parsers.c
 libavcodec/pcm-bluray.c
 libavcodec/pcm-dvd.c
@@ -1940,6 +1943,7 @@ libavdevice/fbdev_enc.c
 libavdevice/file_open.c
 libavdevice/gdigrab.c
 libavdevice/iec61883.c
+libavdevice/indev_list.c
 libavdevice/internal.h
 libavdevice/jack.c
 libavdevice/kmsgrab.c
@@ -1956,6 +1960,7 @@ libavdevice/oss.c
 libavdevice/oss.h
 libavdevice/oss_dec.c
 libavdevice/oss_enc.c
+libavdevice/outdev_list.c
 libavdevice/pulse_audio_common.c
 libavdevice/pulse_audio_common.h
 libavdevice/pulse_audio_dec.c
@@ -2120,6 +2125,7 @@ libavfilter/f_sidedata.c
 libavfilter/f_streamselect.c
 libavfilter/f_zmq.c
 libavfilter/fifo.c
+libavfilter/filter_list.c
 libavfilter/filters.h
 libavfilter/formats.c
 libavfilter/formats.h
@@ -2526,6 +2532,7 @@ libavformat/dauddec.c
 libavformat/daudenc.c
 libavformat/davs2.c
 libavformat/dcstr.c
+libavformat/demuxer_list.c
 libavformat/dfa.c
 libavformat/diracdec.c
 libavformat/dnxhddec.c
@@ -2706,6 +2713,7 @@ libavformat/mtaf.c
 libavformat/mtv.c
 libavformat/musx.c
 libavformat/mux.c
+libavformat/muxer_list.c
 libavformat/mvdec.c
 libavformat/mvi.c
 libavformat/mxf.c
@@ -2755,6 +2763,7 @@ libavformat/pcmenc.c
 libavformat/pjsdec.c
 libavformat/pmpdec.c
 libavformat/prompeg.c
+libavformat/protocol_list.c
 libavformat/protocols.c
 libavformat/psxstr.c
 libavformat/pva.c
@@ -3058,6 +3067,7 @@ libavutil/attributes.h
 libavutil/audio_fifo.c
 libavutil/audio_fifo.h
 libavutil/avassert.h
+libavutil/avconfig.h
 libavutil/avr32/bswap.h
 libavutil/avr32/intreadwrite.h
 libavutil/avstring.c
@@ -3106,6 +3116,7 @@ libavutil/error.h
 libavutil/eval.c
 libavutil/eval.h
 libavutil/ffmath.h
+libavutil/ffversion.h
 libavutil/fifo.c
 libavutil/fifo.h
 libavutil/file.c
