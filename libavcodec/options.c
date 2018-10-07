@@ -134,6 +134,7 @@ static int init_context_defaults(AVCodecContext *s, const AVCodec *codec)
             av_opt_set_defaults(s->priv_data);
         }
     }
+    // 如果codec有特有的默认值，则设置默认值（覆盖context的默认值）
     if (codec && codec->defaults) {
         int ret;
         const AVCodecDefault *d = codec->defaults;

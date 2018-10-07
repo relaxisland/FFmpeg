@@ -1534,11 +1534,11 @@ typedef struct AVCodecContext {
      * information on struct for av_log
      * - set by avcodec_alloc_context3
      */
-    const AVClass *av_class;
+    const AVClass *av_class;        // 负责设定options的  av_codec_context_class （变量， 算单例）
     int log_level_offset;
 
     enum AVMediaType codec_type; /* see AVMEDIA_TYPE_xxx */
-    const struct AVCodec  *codec;
+    const struct AVCodec  *codec;   // 各种codec的预定义变量（比如 ff_libspeex_encoder）, 也算单例
     enum AVCodecID     codec_id; /* see AV_CODEC_ID_xxx */
 
     /**
@@ -1556,7 +1556,7 @@ typedef struct AVCodecContext {
      */
     unsigned int codec_tag;
 
-    void *priv_data;
+    void *priv_data;            //codec的设定值（codec是单例，codec对象特有的设定值，LibSpeexEncContext），根据codec的priv_data_size 分配的
 
     /**
      * Private context used for internal data.

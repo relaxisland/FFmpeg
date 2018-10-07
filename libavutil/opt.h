@@ -395,6 +395,8 @@ void av_opt_set_defaults(void *s);
  * @param mask combination of AV_OPT_FLAG_*
  * @param flags combination of AV_OPT_FLAG_*
  */
+// 设置指定mask（比如video 或者 audio）的option的默认值
+// 为啥需要 mask 和 flags两个参数？ 什么时候会不一样？
 void av_opt_set_defaults2(void *s, int mask, int flags);
 
 /**

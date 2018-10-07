@@ -91,11 +91,13 @@ void av_fast_padded_mallocz(void *ptr, unsigned int *size, size_t min_size)
         memset(*p, 0, min_size + AV_INPUT_BUFFER_PADDING_SIZE);
 }
 
+// 判断AVCodec是否是编码器
 int av_codec_is_encoder(const AVCodec *codec)
 {
     return codec && (codec->encode_sub || codec->encode2 ||codec->send_frame);
 }
 
+// 判断AVCodec是否是解码器
 int av_codec_is_decoder(const AVCodec *codec)
 {
     return codec && (codec->decode || codec->receive_frame);
@@ -2131,7 +2133,7 @@ int avcodec_parameters_to_context(AVCodecContext *codec,
 
     if (par->extradata) {
         av_freep(&codec->extradata);
-        codec->extradata = av_mallocz(par->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+        codec->extradata = av_mallocz(par->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);  // todo extradata具体是啥？
         if (!codec->extradata)
             return AVERROR(ENOMEM);
         memcpy(codec->extradata, par->extradata, par->extradata_size);

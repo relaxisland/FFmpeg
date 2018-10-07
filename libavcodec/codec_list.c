@@ -1,3 +1,5 @@
+//configure 时 生成的。
+// todo  如何生成
 static const AVCodec * const codec_list[] = {
     &ff_a64multi_encoder,
     &ff_a64multi5_encoder,

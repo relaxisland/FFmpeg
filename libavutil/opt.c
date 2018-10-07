@@ -1302,6 +1302,7 @@ void av_opt_set_defaults(void *s)
     av_opt_set_defaults2(s, 0, 0);
 }
 
+// 设置指定mask（比如video 或者 audio）的option的默认值
 void av_opt_set_defaults2(void *s, int mask, int flags)
 {
     const AVOption *opt = NULL;

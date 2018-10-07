@@ -534,6 +534,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 }
 
 
+// todo
 int avformat_open_input(AVFormatContext **ps, const char *filename,
                         AVInputFormat *fmt, AVDictionary **options)
 {

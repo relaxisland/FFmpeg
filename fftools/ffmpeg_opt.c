@@ -55,6 +55,9 @@
     }\
 }
 
+// 从Specifier数组分离出各个类别（mediatype,specifier）的值
+// 比如从codec_names的specifier数组从分离出 video, audio,subtitle,data codec
+// 这边（66行）的type并不是u的成员，是define的参数
 #define MATCH_PER_TYPE_OPT(name, type, outvar, fmtctx, mediatype)\
 {\
     int i;\
@@ -264,6 +267,22 @@ static int opt_data_codec(void *optctx, const char *opt, const char *arg)
     return parse_option(o, "codec:d", arg, options);
 }
 
+// -map file:stream 设置输入流映射
+//ffmpeg -i input.mkv -map 0:0 -map 0:1 -map 0:1 -map 0:3           （按顺序对应输出的流id，0,1,2,3）
+//-c:v copy
+//-c:a:0 libmp3lame -b:a:0 128k         (输出流的第一个音频)
+//-c:a:1 libfaac -b:a:1 96k             (输出流的第二个音频)
+//-c:s copy
+//output.mkv
+
+//例子2 重新编码视频流，但复制所有其他流（如音频、字幕、附件等）
+// ffmpeg -i input.mkv -map 0 -c copy -c:v mpeg2video output.mkv
+
+// 如果filter
+// ffmpeg -i INPUT -filter_complex "[0] scale=100x100[smaller_sized]"  -map "[smaller_sized]" out.mp4
+
+// -map [-]input_file_id[:stream_specifier][,sync_file_id[:stream_specifier]]
+// ffmpeg -i a.mov -i b.mov -c copy -map 0:2 -map 1:6 out.mov
 static int opt_map(void *optctx, const char *opt, const char *arg)
 {
     OptionsContext *o = optctx;
@@ -649,6 +668,9 @@ static int opt_recording_timestamp(void *optctx, const char *opt, const char *ar
     return 0;
 }
 
+// 根据codec name 查找 AVCodec
+// type: codec类型 AVMEDIA_TYPE_VIDEO/AVMEDIA_TYPE_AUDIO/AVMEDIA_TYPE_SUBTITLE/AVMEDIA_TYPE_DATA
+// encoder: 是编码器，还是解码器
 static AVCodec *find_codec_or_die(const char *name, enum AVMediaType type, int encoder)
 {
     const AVCodecDescriptor *desc;
@@ -659,6 +681,7 @@ static AVCodec *find_codec_or_die(const char *name, enum AVMediaType type, int e
         avcodec_find_encoder_by_name(name) :
         avcodec_find_decoder_by_name(name);
 
+    // todo  为啥需要这一步？ 什么情况下需要这一步。（codec列表 name找不到，但是id却能找到？）
     if (!codec && (desc = avcodec_descriptor_get_by_name(name))) {
         codec = encoder ? avcodec_find_encoder(desc->id) :
                           avcodec_find_decoder(desc->id);
@@ -693,6 +716,7 @@ static AVCodec *choose_decoder(OptionsContext *o, AVFormatContext *s, AVStream *
 
 /* Add all the streams from the given input file to the global
  * list of input streams. */
+// 所有输入文件的所有流 都添加到全局变量 input_streams
 static void add_input_streams(OptionsContext *o, AVFormatContext *ic)
 {
     int i, ret;
@@ -717,7 +741,7 @@ static void add_input_streams(OptionsContext *o, AVFormatContext *ic)
         input_streams[nb_input_streams - 1] = ist;
 
         ist->st = st;
-        ist->file_index = nb_input_files;
+        ist->file_index = nb_input_files;       // 对应的文件的序号
         ist->discard = 1;
         st->discard  = AVDISCARD_ALL;
         ist->nb_samples = 0;
@@ -725,6 +749,10 @@ static void add_input_streams(OptionsContext *o, AVFormatContext *ic)
         ist->max_pts = INT64_MIN;
 
         ist->ts_scale = 1.0;
+        // 从SpecifierOpt数组中，找到该流对应的设定。（一个输入文件的所有流的设定都保存在SpecifierOpt数组）
+        // ts_scale：要找的SpecifierOpt数组 的 name
+        // dbl：SpecifierOpt里保持的数据的类型
+        // ist->ts_scale：设定读出后保存的位置
         MATCH_PER_STREAM_OPT(ts_scale, dbl, ist->ts_scale, ic, st);
 
         ist->autorotate = 1;
@@ -1007,6 +1035,7 @@ static int open_input_file(OptionsContext *o, const char *filename)
         }
     }
 
+    // 设定了format，但是不存在
     if (o->format) {
         if (!(file_iformat = av_find_input_format(o->format))) {
             av_log(NULL, AV_LOG_FATAL, "Unknown input format: '%s'\n", o->format);
@@ -1014,6 +1043,7 @@ static int open_input_file(OptionsContext *o, const char *filename)
         }
     }
 
+    // todo 怎么用?
     if (!strcmp(filename, "-"))
         filename = "pipe:";
 
@@ -1026,10 +1056,16 @@ static int open_input_file(OptionsContext *o, const char *filename)
         print_error(filename, AVERROR(ENOMEM));
         exit_program(1);
     }
+
+    // todo nb_audio_sample_rate 可能大于1吗？ 什么情况？
+    // 这个选项为啥需要在ffmpeg的options表
     if (o->nb_audio_sample_rate) {
         av_dict_set_int(&o->g->format_opts, "sample_rate", o->audio_sample_rate[o->nb_audio_sample_rate - 1].u.i, 0);
     }
+
+    //如果选项没有指明format（file_iformat为空），这个设置就被 无视？
     if (o->nb_audio_channels) {
+        // todo 下面这段没看懂
         /* because we set audio_channels based on both the "ac" and
          * "channel_layout" options, we need to check that the specified
          * demuxer actually has the "channels" option before setting it */
@@ -1055,6 +1091,7 @@ static int open_input_file(OptionsContext *o, const char *filename)
     if (o->nb_frame_pix_fmts)
         av_dict_set(&o->g->format_opts, "pixel_format", o->frame_pix_fmts[o->nb_frame_pix_fmts - 1].u.str, 0);
 
+    // 从OptionsContext的specifier数组codec_names，获取各个类别的codec name
     MATCH_PER_TYPE_OPT(codec_names, str,    video_codec_name, ic, "v");
     MATCH_PER_TYPE_OPT(codec_names, str,    audio_codec_name, ic, "a");
     MATCH_PER_TYPE_OPT(codec_names, str, subtitle_codec_name, ic, "s");
@@ -1077,7 +1114,7 @@ static int open_input_file(OptionsContext *o, const char *filename)
     ic->flags |= AVFMT_FLAG_NONBLOCK;
     if (o->bitexact)
         ic->flags |= AVFMT_FLAG_BITEXACT;
-    ic->interrupt_callback = int_cb;
+    ic->interrupt_callback = int_cb;        // todo
 
     if (!av_dict_get(o->g->format_opts, "scan_all_pmts", NULL, AV_DICT_MATCH_CASE)) {
         av_dict_set(&o->g->format_opts, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
@@ -1093,20 +1130,20 @@ static int open_input_file(OptionsContext *o, const char *filename)
     }
     if (scan_all_pmts_set)
         av_dict_set(&o->g->format_opts, "scan_all_pmts", NULL, AV_DICT_MATCH_CASE);
-    remove_avoptions(&o->g->format_opts, o->g->codec_opts);
-    assert_avoptions(o->g->format_opts);
+    remove_avoptions(&o->g->format_opts, o->g->codec_opts);     //todo 目的？
+    assert_avoptions(o->g->format_opts);        // todo 一定会有值吗？命令行可以不设置format的选项吧
 
     /* apply forced codec ids */
-    for (i = 0; i < ic->nb_streams; i++)
+    for (i = 0; i < ic->nb_streams; i++)    // todo avformat_open_input 之后就知道stream的个数？ 不需要find_stream。。？
         choose_decoder(o, ic, ic->streams[i]);
 
-    if (find_stream_info) {
-        AVDictionary **opts = setup_find_stream_info_opts(ic, o->g->codec_opts);
+    if (find_stream_info) { // 什么时候有，什么时候没有（用户需要根据具体的视频格式，进行命令设定？）
+        AVDictionary **opts = setup_find_stream_info_opts(ic, o->g->codec_opts);        // todo 看名字大概知道意思，具体逻辑还不知道
         int orig_nb_streams = ic->nb_streams;
 
         /* If not enough info to get the stream parameters, we decode the
            first frames to get it. (used in mpeg case for example) */
-        ret = avformat_find_stream_info(ic, opts);
+        ret = avformat_find_stream_info(ic, opts);      // todo
 
         for (i = 0; i < orig_nb_streams; i++)
             av_dict_free(&opts[i]);
@@ -1168,12 +1205,13 @@ static int open_input_file(OptionsContext *o, const char *filename)
     }
 
     /* update the current parameters so that they match the one of the input stream */
+    // 所有输入文件的所有流 都添加到全局变量 input_streams
     add_input_streams(o, ic);
 
     /* dump the file content */
     av_dump_format(ic, nb_input_files, filename, 0);
 
-    GROW_ARRAY(input_files, nb_input_files);
+    GROW_ARRAY(input_files, nb_input_files);        // 隐含nb_input_files++
     f = av_mallocz(sizeof(*f));
     if (!f)
         exit_program(1);
@@ -2082,6 +2120,7 @@ static int init_complex_filters(void)
     return 0;
 }
 
+//打开输出文件
 static int open_output_file(OptionsContext *o, const char *filename)
 {
     AVFormatContext *oc;
@@ -2164,7 +2203,7 @@ static int open_output_file(OptionsContext *o, const char *filename)
         }
     }
 
-    if (!o->nb_stream_maps) {
+    if (!o->nb_stream_maps) {       //如果没有设置map，从所有输入中发现最高质量的视频流，音频流等各一个
         char *subtitle_codec_name = NULL;
         /* pick the "best" stream of each type */
 
@@ -3093,6 +3132,7 @@ static int opt_audio_qscale(void *optctx, const char *opt, const char *arg)
     return parse_option(o, "q:a", arg, options);
 }
 
+// 命令filter_complex的处理函数
 static int opt_filter_complex(void *optctx, const char *opt, const char *arg)
 {
     GROW_ARRAY(filtergraphs, nb_filtergraphs);
@@ -3294,6 +3334,7 @@ int ffmpeg_parse_options(int argc, char **argv)
     }
 
     /* create the complex filtergraphs */
+    // todo filter 不熟悉，暂略过
     ret = init_complex_filters();
     if (ret < 0) {
         av_log(NULL, AV_LOG_FATAL, "Error initializing complex filters.\n");

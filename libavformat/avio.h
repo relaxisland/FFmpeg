@@ -230,6 +230,7 @@ typedef struct AVIOContext {
                                  buffer+buffer_size if the read function returned
                                  less data than requested, e.g. for streams where
                                  no more data has been received yet. */
+    // AVIOInternal
     void *opaque;           /**< A private pointer, passed to the read/write/seek/...
                                  functions. */
     int (*read_packet)(void *opaque, uint8_t *buf, int buf_size);

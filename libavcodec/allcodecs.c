@@ -784,7 +784,7 @@ static void av_codec_init_static(void)
 {
     for (int i = 0; codec_list[i]; i++) {
         if (codec_list[i]->init_static_data)
-            codec_list[i]->init_static_data((AVCodec*)codec_list[i]);
+            codec_list[i]->init_static_data((AVCodec*)codec_list[i]);   // 为啥有的codec需要这个？ 为啥要在这边对所有的codec执行？（实际可能只会用其中的1，2个）
     }
 }
 
@@ -793,6 +793,7 @@ const AVCodec *av_codec_iterate(void **opaque)
     uintptr_t i = (uintptr_t)*opaque;
     const AVCodec *c = codec_list[i];
 
+    // 只会执行一次
     ff_thread_once(&av_codec_static_init, av_codec_init_static);
 
     if (c)
@@ -880,6 +881,8 @@ AVCodec *avcodec_find_decoder(enum AVCodecID id)
     return find_codec(id, av_codec_is_decoder);
 }
 
+// 根据codec name查找 codec
+// 函数x：查找的是编码器 还是 解码器
 static AVCodec *find_codec_by_name(const char *name, int (*x)(const AVCodec *))
 {
     void *i = 0;
@@ -888,7 +891,7 @@ static AVCodec *find_codec_by_name(const char *name, int (*x)(const AVCodec *))
     if (!name)
         return NULL;
 
-    while ((p = av_codec_iterate(&i))) {
+    while ((p = av_codec_iterate(&i))) {    // 依次获取codec列表中的每个codec
         if (!x(p))
             continue;
         if (strcmp(name, p->name) == 0)
@@ -898,11 +901,13 @@ static AVCodec *find_codec_by_name(const char *name, int (*x)(const AVCodec *))
     return NULL;
 }
 
+// 根据codec name查找 编码器
 AVCodec *avcodec_find_encoder_by_name(const char *name)
 {
     return find_codec_by_name(name, av_codec_is_encoder);
 }
 
+// 根据codec name查找 解码器
 AVCodec *avcodec_find_decoder_by_name(const char *name)
 {
     return find_codec_by_name(name, av_codec_is_decoder);
