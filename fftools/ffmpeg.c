@@ -3665,6 +3665,7 @@ static int transcode_init(void)
     InputStream *ist;
     char error[1024] = {0};
 
+    // filter 略
     for (i = 0; i < nb_filtergraphs; i++) {
         FilterGraph *fg = filtergraphs[i];
         for (j = 0; j < fg->nb_outputs; j++) {
